@@ -18,7 +18,7 @@ export async function geocodePlaceId(placeId: string): Promise<GeoCoords | null>
   }
 
   const url = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${encodeURIComponent(placeId)}&key=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) return null;
 
   const data = (await res.json()) as {
