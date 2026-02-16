@@ -150,6 +150,29 @@ docker compose up -d
 
 ---
 
-## License
+## Screenshots
 
-MIT
+### Page 1
+![Page 1](results/page1.png)
+
+### Page 2
+![Page 2](results/page2.png)
+
+### Page 3
+![Page 3](results/page3.png)
+
+### Page 4
+![Page 4](results/page4.png)
+
+### Page 5
+![Page 5](results/page5.png)
+
+### Page 6
+![Page 6](results/page6.png)
+
+### Page 7
+![Page 7](results/page7.png)
+
+---
+
+
