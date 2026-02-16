@@ -66,6 +66,9 @@ export default function Register() {
         <p className="auth-footer">
           Already have an account? <Link to="/login">Sign in</Link>
         </p>
+        <p className="auth-footer">
+          <Link to="/about">About LifeLink</Link>
+        </p>
       </div>
     </div>
   );

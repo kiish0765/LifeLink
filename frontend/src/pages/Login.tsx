@@ -60,6 +60,9 @@ export default function Login() {
         <p className="auth-footer">
           Don't have an account? <Link to="/register">Register</Link>
         </p>
+        <p className="auth-footer">
+          <Link to="/about">About LifeLink</Link>
+        </p>
       </div>
     </div>
   );

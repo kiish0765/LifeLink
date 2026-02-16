@@ -18,6 +18,7 @@ export default function Layout() {
         <nav className="nav">
           <Link to="/">Dashboard</Link>
           <Link to="/requests">Requests</Link>
+          <Link to="/about">About</Link>
           {user?.role === 'donor' && (
             <>
               <Link to="/donor/profile">My Profile</Link>

@@ -14,6 +14,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminDonors from './pages/AdminDonors';
 import AdminHospitals from './pages/AdminHospitals';
 import AdminAudit from './pages/AdminAudit';
+import About from './pages/About';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, loading } = useAuth();
@@ -28,6 +29,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/about" element={<About />} />
       <Route
         path="/"
         element={
