@@ -1,0 +1,26 @@
+.dashboard h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+.dashboard-role { color: var(--text-muted); margin-bottom: 1.5rem; }
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.dashboard-card {
+  display: block;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, background 0.2s;
+}
+.dashboard-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+  text-decoration: none;
+  color: inherit;
+}
+.dashboard-card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.dashboard-card p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+.dashboard-card.highlight { border-color: var(--accent); }
