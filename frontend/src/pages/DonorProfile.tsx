@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { api, auth } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../hooks/useWebSocket';
+import GooglePlacePicker from '../components/GooglePlacePicker';
 import '../components/Layout.css';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -12,8 +13,7 @@ interface DonorProfileType {
   blood_group: string;
   date_of_birth: string;
   city: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  location_place_id: string | null;
   is_available: boolean;
   verification_status: string;
 }
@@ -23,8 +23,8 @@ export default function DonorProfile() {
   const [profile, setProfile] = useState<DonorProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ city: '', latitude: '', longitude: '', isAvailable: true });
-  const [createForm, setCreateForm] = useState({ bloodGroup: 'O+', dateOfBirth: '', city: '', latitude: '', longitude: '' });
+  const [form, setForm] = useState({ city: '', location: { placeId: '', address: '' }, isAvailable: true });
+  const [createForm, setCreateForm] = useState({ bloodGroup: 'O+', dateOfBirth: '', city: '', location: { placeId: '', address: '' } });
   useWebSocket();
 
   useEffect(() => {
@@ -38,8 +38,7 @@ export default function DonorProfile() {
     if (profile) {
       setForm({
         city: profile.city ?? '',
-        latitude: profile.latitude != null ? String(profile.latitude) : '',
-        longitude: profile.longitude != null ? String(profile.longitude) : '',
+        location: { placeId: profile.location_place_id ?? '', address: '' },
         isAvailable: profile.is_available,
       });
     }
@@ -55,8 +54,7 @@ export default function DonorProfile() {
           bloodGroup: createForm.bloodGroup,
           dateOfBirth: createForm.dateOfBirth,
           city: createForm.city || undefined,
-          latitude: createForm.latitude ? parseFloat(createForm.latitude) : undefined,
-          longitude: createForm.longitude ? parseFloat(createForm.longitude) : undefined,
+          locationPlaceId: createForm.location.placeId || undefined,
         }),
       });
       setProfile(created);
@@ -78,8 +76,7 @@ export default function DonorProfile() {
         method: 'PATCH',
         body: JSON.stringify({
           city: form.city || undefined,
-          latitude: form.latitude ? parseFloat(form.latitude) : undefined,
-          longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+          locationPlaceId: form.location.placeId || undefined,
           isAvailable: form.isAvailable,
         }),
       });
@@ -112,14 +109,10 @@ export default function DonorProfile() {
             <label>City</label>
             <input value={createForm.city} onChange={(e) => setCreateForm((f) => ({ ...f, city: e.target.value }))} />
           </div>
-          <div className="form-group">
-            <label>Latitude</label>
-            <input type="number" step="any" value={createForm.latitude} onChange={(e) => setCreateForm((f) => ({ ...f, latitude: e.target.value }))} placeholder="e.g. 12.9716" />
-          </div>
-          <div className="form-group">
-            <label>Longitude</label>
-            <input type="number" step="any" value={createForm.longitude} onChange={(e) => setCreateForm((f) => ({ ...f, longitude: e.target.value }))} placeholder="e.g. 77.5946" />
-          </div>
+          <GooglePlacePicker
+            value={createForm.location}
+            onChange={(location) => setCreateForm((f) => ({ ...f, location }))}
+          />
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Creating...' : 'Create profile'}</button>
           </div>
@@ -141,14 +134,10 @@ export default function DonorProfile() {
           <label>City</label>
           <input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
         </div>
-        <div className="form-group">
-          <label>Latitude (for matching)</label>
-          <input type="number" step="any" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))} placeholder="e.g. 12.9716" />
-        </div>
-        <div className="form-group">
-          <label>Longitude</label>
-          <input type="number" step="any" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))} placeholder="e.g. 77.5946" />
-        </div>
+        <GooglePlacePicker
+          value={form.location}
+          onChange={(location) => setForm((f) => ({ ...f, location }))}
+        />
         <div className="form-group">
           <label>
             <input type="checkbox" checked={form.isAvailable} onChange={(e) => setForm((f) => ({ ...f, isAvailable: e.target.checked }))} />

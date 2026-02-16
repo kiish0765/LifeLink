@@ -2,6 +2,7 @@ import { query } from '../../db/postgres.js';
 import { BLOOD_GROUP_COMPATIBILITY, type BloodGroup, type UrgencyLevel } from '../../shared/types.js';
 import { config } from '../../config/index.js';
 import { isDonorAvailable } from '../../db/redis.js';
+import { geocodePlaceId } from '../../shared/geocode.js';
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -27,6 +28,7 @@ export interface EligibleDonor {
   bloodGroup: BloodGroup;
   latitude: number;
   longitude: number;
+  locationPlaceId: string;
   distanceKm: number;
   lastDonationAt: Date | null;
   isAvailable: boolean;
@@ -48,19 +50,18 @@ export async function findEligibleDonors(
     id: string;
     user_id: string;
     blood_group: string;
-    latitude: number;
-    longitude: number;
+    location_place_id: string | null;
     last_donation_at: Date | null;
     is_available: boolean;
     date_of_birth: string;
   }>(
-    `SELECT d.id, d.user_id, d.blood_group, d.latitude, d.longitude, d.last_donation_at, d.is_available, d.date_of_birth
+    `SELECT d.id, d.user_id, d.blood_group, d.location_place_id, d.last_donation_at, d.is_available, d.date_of_birth
      FROM donors d
      JOIN users u ON u.id = d.user_id AND u.is_active = TRUE
      WHERE d.blood_group = ANY($1)
        AND d.verification_status = 'verified'
        AND d.is_available = TRUE
-       AND d.latitude IS NOT NULL AND d.longitude IS NOT NULL
+       AND d.location_place_id IS NOT NULL
        AND (d.last_donation_at IS NULL OR d.last_donation_at < NOW() - ($2 || ' days')::INTERVAL)
      LIMIT $3`,
     [compatibleGroups, intervalDays, limit * 3]
@@ -76,12 +77,10 @@ export async function findEligibleDonors(
       today.getFullYear() -
       new Date(row.date_of_birth).getFullYear();
     if (age < minAge || age > maxAge) continue;
-    const distanceKm = haversineDistanceKm(
-      requestLat,
-      requestLon,
-      Number(row.latitude),
-      Number(row.longitude)
-    );
+    if (!row.location_place_id) continue;
+    const coords = await geocodePlaceId(row.location_place_id);
+    if (!coords) continue;
+    const distanceKm = haversineDistanceKm(requestLat, requestLon, coords.lat, coords.lon);
     if (distanceKm > maxDistanceKm) continue;
     const redisAvailable = await isDonorAvailable(row.id);
     if (!redisAvailable) continue;
@@ -89,8 +88,9 @@ export async function findEligibleDonors(
       donorId: row.id,
       userId: row.user_id,
       bloodGroup: row.blood_group as BloodGroup,
-      latitude: Number(row.latitude),
-      longitude: Number(row.longitude),
+      latitude: coords.lat,
+      longitude: coords.lon,
+      locationPlaceId: row.location_place_id,
       distanceKm: Math.round(distanceKm * 1000) / 1000,
       lastDonationAt: row.last_donation_at,
       isAvailable: row.is_available,

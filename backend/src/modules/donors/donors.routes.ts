@@ -17,16 +17,14 @@ const createDonorSchema = z.object({
   city: z.string().max(100).optional(),
   state: z.string().max(100).optional(),
   country: z.string().max(100).optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  locationPlaceId: z.string().max(200).optional(),
 });
 
 const updateDonorSchema = z.object({
   addressLine: z.string().max(500).optional(),
   city: z.string().max(100).optional(),
   state: z.string().max(100).optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  locationPlaceId: z.string().max(200).optional(),
   isAvailable: z.boolean().optional(),
 });
 
@@ -50,8 +48,7 @@ router.post(
       city: body.city,
       state: body.state,
       country: body.country,
-      latitude: body.latitude,
-      longitude: body.longitude,
+      locationPlaceId: body.locationPlaceId,
     });
     const ip = getClientIp(req);
     await auditPostgres(req.user.id, 'donor_created', 'donor', donor.id, undefined, ip);
@@ -87,8 +84,7 @@ router.patch(
       addressLine: body.addressLine,
       city: body.city,
       state: body.state,
-      latitude: body.latitude,
-      longitude: body.longitude,
+      locationPlaceId: body.locationPlaceId,
       isAvailable: body.isAvailable,
     });
     if (!donor) return res.status(404).json({ message: 'Donor not found' });
@@ -132,17 +128,44 @@ router.get(
 );
 
 // Admin: verify or reject donor
+async function setDonorVerificationStatus(
+  req: Parameters<Parameters<typeof asyncHandler>[0]>[0],
+  res: Parameters<Parameters<typeof asyncHandler>[0]>[1],
+  status: 'verified' | 'rejected'
+) {
+  const donor = await donorsService.verifyDonor(req.params.id, status);
+  if (!donor) return res.status(404).json({ message: 'Donor not found' });
+  const ip = getClientIp(req);
+  await auditPostgres(req.user!.id, 'donor_verified', 'donor', donor.id, { status }, ip);
+  return res.json(donor);
+}
+
 router.post(
   '/:id/verify',
   requireRoles('admin'),
   asyncHandler(async (req, res) => {
-    const schema = z.object({ status: z.enum(['verified', 'rejected']) });
+    const schema = z.object({ status: z.enum(['verified', 'rejected', 'approved']) });
     const { status } = schema.parse(req.body);
-    const donor = await donorsService.verifyDonor(req.params.id, status);
-    if (!donor) return res.status(404).json({ message: 'Donor not found' });
-    const ip = getClientIp(req);
-    await auditPostgres(req.user!.id, 'donor_verified', 'donor', donor.id, { status }, ip);
-    res.json(donor);
+    const normalizedStatus = status === 'approved' ? 'verified' : status;
+    return setDonorVerificationStatus(req, res, normalizedStatus);
+  })
+);
+
+// Admin: explicit approve endpoint (alias of verify)
+router.post(
+  '/:id/approve',
+  requireRoles('admin'),
+  asyncHandler(async (req, res) => {
+    return setDonorVerificationStatus(req, res, 'verified');
+  })
+);
+
+// Admin: explicit reject endpoint
+router.post(
+  '/:id/reject',
+  requireRoles('admin'),
+  asyncHandler(async (req, res) => {
+    return setDonorVerificationStatus(req, res, 'rejected');
   })
 );
 

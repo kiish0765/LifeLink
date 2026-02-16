@@ -54,6 +54,9 @@ export const config = {
     authToken: process.env.TWILIO_AUTH_TOKEN,
     phoneNumber: process.env.TWILIO_PHONE_NUMBER,
   },
+  googleMaps: {
+    backendKey: process.env.GOOGLE_MAPS_BACKEND_KEY,
+  },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
   rateLimit: {
     windowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS', 60000),

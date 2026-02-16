@@ -15,8 +15,7 @@ const createHospitalSchema = z.object({
   city: z.string().max(100).optional(),
   state: z.string().max(100).optional(),
   country: z.string().max(100).optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  locationPlaceId: z.string().max(200).optional(),
   contactPhone: z.string().max(50).optional(),
 });
 

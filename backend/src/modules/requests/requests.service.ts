@@ -1,41 +1,44 @@
 import { query, BloodRequestRow } from '../../db/postgres.js';
 import type { BloodGroup, UrgencyLevel, RequestStatus } from '../../shared/types.js';
 import * as matchingService from '../matching/matching.service.js';
+import { geocodePlaceId } from '../../shared/geocode.js';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 const URGENCIES: UrgencyLevel[] = ['low', 'medium', 'high', 'critical'];
 const STATUSES: RequestStatus[] = ['open', 'matched', 'in_progress', 'fulfilled', 'cancelled'];
 
 export interface CreateRequestInput {
-  hospitalId: string;
-  createdBy: string;
+  hospitalId: string | null;
+  requesterUserId: string;
+  requesterRole: 'hospital' | 'receiver';
   bloodGroup: BloodGroup;
   unitsRequired: number;
   urgency?: UrgencyLevel;
   patientInfo?: string;
   notes?: string;
-  latitude?: number;
-  longitude?: number;
+  locationPlaceId: string;
+  locationAddress?: string;
 }
 
 export async function createRequest(data: CreateRequestInput): Promise<BloodRequestRow> {
   const urgency = data.urgency ?? 'high';
   const res = await query<BloodRequestRow>(
     `INSERT INTO blood_requests (
-      hospital_id, created_by, blood_group, units_required, urgency, patient_info, notes,
-      latitude, longitude
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      hospital_id, requester_user_id, requester_role, blood_group, units_required, urgency, patient_info, notes,
+      location_place_id, location_address
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *`,
     [
       data.hospitalId,
-      data.createdBy,
+      data.requesterUserId,
+      data.requesterRole,
       data.bloodGroup,
       data.unitsRequired,
       urgency,
       data.patientInfo ?? null,
       data.notes ?? null,
-      data.latitude ?? null,
-      data.longitude ?? null,
+      data.locationPlaceId,
+      data.locationAddress ?? null,
     ]
   );
   return res.rows[0];
@@ -94,12 +97,14 @@ export async function updateRequestStatus(
 
 export async function getEligibleDonorsForRequest(requestId: string): Promise<matchingService.EligibleDonor[]> {
   const req = await getRequestById(requestId);
-  if (!req || !req.latitude || !req.longitude) return [];
+  if (!req) return [];
+  const coords = await geocodePlaceId(req.location_place_id);
+  if (!coords) return [];
   return matchingService.findEligibleDonors(
     requestId,
     req.blood_group as BloodGroup,
-    Number(req.latitude),
-    Number(req.longitude),
+    coords.lat,
+    coords.lon,
     100,
     50
   );
@@ -117,11 +122,12 @@ export async function setMatchResponse(
   requestId: string,
   donorId: string,
   status: 'accepted' | 'rejected'
-): Promise<void> {
-  await query(
+): Promise<boolean> {
+  const res = await query(
     `UPDATE request_matches SET status = $1, responded_at = NOW() WHERE request_id = $2 AND donor_id = $3`,
     [status, requestId, donorId]
   );
+  return (res.rowCount ?? 0) > 0;
 }
 
 export async function getMatchesForRequest(requestId: string) {

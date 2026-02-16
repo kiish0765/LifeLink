@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { api, auth } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import GooglePlacePicker from '../components/GooglePlacePicker';
 import '../components/Layout.css';
 
 interface HospitalType {
@@ -9,8 +10,7 @@ interface HospitalType {
   name: string;
   city: string | null;
   address_line: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  location_place_id: string | null;
   is_approved: boolean;
 }
 
@@ -19,7 +19,7 @@ export default function HospitalProfile() {
   const [profile, setProfile] = useState<HospitalType | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', city: '', addressLine: '', latitude: '', longitude: '', contactPhone: '' });
+  const [createForm, setCreateForm] = useState({ name: '', city: '', addressLine: '', location: { placeId: '', address: '' }, contactPhone: '' });
 
   useEffect(() => {
     api<HospitalType>('/hospitals/me')
@@ -38,8 +38,7 @@ export default function HospitalProfile() {
           name: createForm.name,
           city: createForm.city || undefined,
           addressLine: createForm.addressLine || undefined,
-          latitude: createForm.latitude ? parseFloat(createForm.latitude) : undefined,
-          longitude: createForm.longitude ? parseFloat(createForm.longitude) : undefined,
+          locationPlaceId: createForm.location.placeId || undefined,
           contactPhone: createForm.contactPhone || undefined,
         }),
       });
@@ -72,14 +71,10 @@ export default function HospitalProfile() {
             <label>Address</label>
             <input value={createForm.addressLine} onChange={(e) => setCreateForm((f) => ({ ...f, addressLine: e.target.value }))} />
           </div>
-          <div className="form-group">
-            <label>Latitude (for request matching)</label>
-            <input type="number" step="any" value={createForm.latitude} onChange={(e) => setCreateForm((f) => ({ ...f, latitude: e.target.value }))} placeholder="e.g. 12.9716" />
-          </div>
-          <div className="form-group">
-            <label>Longitude</label>
-            <input type="number" step="any" value={createForm.longitude} onChange={(e) => setCreateForm((f) => ({ ...f, longitude: e.target.value }))} placeholder="e.g. 77.5946" />
-          </div>
+          <GooglePlacePicker
+            value={createForm.location}
+            onChange={(location) => setCreateForm((f) => ({ ...f, location }))}
+          />
           <div className="form-group">
             <label>Contact phone</label>
             <input type="tel" value={createForm.contactPhone} onChange={(e) => setCreateForm((f) => ({ ...f, contactPhone: e.target.value }))} />

@@ -1,5 +1,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
+ARG VITE_GOOGLE_MAPS_FRONTEND_KEY
+ENV VITE_GOOGLE_MAPS_FRONTEND_KEY=$VITE_GOOGLE_MAPS_FRONTEND_KEY
 COPY package*.json ./
 RUN npm ci
 COPY tsconfig*.json ./

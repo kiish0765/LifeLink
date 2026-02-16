@@ -36,8 +36,7 @@ CREATE TABLE donors (
   city VARCHAR(100),
   state VARCHAR(100),
   country VARCHAR(100) DEFAULT 'India',
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
+  location_place_id TEXT,
   last_donation_at TIMESTAMPTZ,
   is_available BOOLEAN DEFAULT TRUE,
   verification_status VARCHAR(30) DEFAULT 'pending' CHECK (verification_status IN ('pending','verified','rejected')),
@@ -49,8 +48,8 @@ CREATE TABLE donors (
 CREATE INDEX idx_donors_user ON donors(user_id);
 CREATE INDEX idx_donors_blood_group ON donors(blood_group);
 CREATE INDEX idx_donors_available ON donors(is_available) WHERE is_available = TRUE;
-CREATE INDEX idx_donors_location ON donors(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 CREATE INDEX idx_donors_verification ON donors(verification_status);
+CREATE INDEX idx_donors_place_id ON donors(location_place_id);
 
 -- Hospitals
 CREATE TABLE hospitals (
@@ -62,8 +61,7 @@ CREATE TABLE hospitals (
   city VARCHAR(100),
   state VARCHAR(100),
   country VARCHAR(100) DEFAULT 'India',
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
+  location_place_id TEXT,
   contact_phone VARCHAR(50),
   is_approved BOOLEAN DEFAULT FALSE,
   approved_at TIMESTAMPTZ,
@@ -72,8 +70,8 @@ CREATE TABLE hospitals (
 );
 
 CREATE INDEX idx_hospitals_user ON hospitals(user_id);
-CREATE INDEX idx_hospitals_location ON hospitals(latitude, longitude);
 CREATE INDEX idx_hospitals_approved ON hospitals(is_approved) WHERE is_approved = TRUE;
+CREATE INDEX idx_hospitals_place_id ON hospitals(location_place_id);
 
 -- Blood requests (emergency requests from hospitals)
 CREATE TYPE urgency_level AS ENUM ('low', 'medium', 'high', 'critical');
@@ -81,25 +79,28 @@ CREATE TYPE request_status AS ENUM ('open', 'matched', 'in_progress', 'fulfilled
 
 CREATE TABLE blood_requests (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  hospital_id UUID REFERENCES hospitals(id) ON DELETE CASCADE,
+  requester_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  requester_role user_role NOT NULL,
   blood_group VARCHAR(5) NOT NULL CHECK (blood_group IN ('A+','A-','B+','B-','AB+','AB-','O+','O-')),
   units_required INT NOT NULL DEFAULT 1 CHECK (units_required > 0),
   urgency urgency_level NOT NULL DEFAULT 'high',
   status request_status NOT NULL DEFAULT 'open',
   patient_info TEXT,
   notes TEXT,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  created_by UUID REFERENCES users(id),
+  location_place_id TEXT NOT NULL,
+  location_address TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   fulfilled_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_blood_requests_hospital ON blood_requests(hospital_id);
+CREATE INDEX idx_blood_requests_requester ON blood_requests(requester_user_id);
 CREATE INDEX idx_blood_requests_status ON blood_requests(status);
 CREATE INDEX idx_blood_requests_blood_urgency ON blood_requests(blood_group, urgency, status);
 CREATE INDEX idx_blood_requests_created ON blood_requests(created_at DESC);
+CREATE INDEX idx_blood_requests_place_id ON blood_requests(location_place_id);
 
 -- Donation history (completed donations)
 CREATE TABLE donations (

@@ -18,8 +18,7 @@ export interface CreateDonorInput {
   city?: string;
   state?: string;
   country?: string;
-  latitude?: number;
-  longitude?: number;
+  locationPlaceId?: string;
 }
 
 export async function createDonor(data: CreateDonorInput): Promise<DonorRow> {
@@ -29,8 +28,8 @@ export async function createDonor(data: CreateDonorInput): Promise<DonorRow> {
   const res = await query<DonorRow>(
     `INSERT INTO donors (
       user_id, blood_group, date_of_birth, gender, address_line, city, state, country,
-      latitude, longitude
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      location_place_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *`,
     [
       data.userId,
@@ -41,8 +40,7 @@ export async function createDonor(data: CreateDonorInput): Promise<DonorRow> {
       data.city ?? null,
       data.state ?? null,
       data.country ?? 'India',
-      data.latitude ?? null,
-      data.longitude ?? null,
+      data.locationPlaceId ?? null,
     ]
   );
   return res.rows[0];
@@ -64,8 +62,7 @@ export async function updateDonor(
     addressLine: string;
     city: string;
     state: string;
-    latitude: number;
-    longitude: number;
+    locationPlaceId: string;
     isAvailable: boolean;
   }>
 ): Promise<DonorRow | null> {
@@ -84,13 +81,9 @@ export async function updateDonor(
     sets.push(`state = $${i++}`);
     values.push(updates.state);
   }
-  if (updates.latitude !== undefined) {
-    sets.push(`latitude = $${i++}`);
-    values.push(updates.latitude);
-  }
-  if (updates.longitude !== undefined) {
-    sets.push(`longitude = $${i++}`);
-    values.push(updates.longitude);
+  if (updates.locationPlaceId !== undefined) {
+    sets.push(`location_place_id = $${i++}`);
+    values.push(updates.locationPlaceId);
   }
   if (updates.isAvailable !== undefined) {
     sets.push(`is_available = $${i++}`);
@@ -117,7 +110,11 @@ export async function setLastDonation(donorId: string, donatedAt: Date): Promise
 
 export async function verifyDonor(donorId: string, status: 'verified' | 'rejected'): Promise<DonorRow | null> {
   const res = await query<DonorRow>(
-    `UPDATE donors SET verification_status = $1, verified_at = CASE WHEN $1 = 'verified' THEN NOW() ELSE NULL END WHERE id = $2 RETURNING *`,
+    `UPDATE donors
+     SET verification_status = $1::varchar,
+         verified_at = CASE WHEN $1::varchar = 'verified'::varchar THEN NOW() ELSE NULL END
+     WHERE id = $2
+     RETURNING *`,
     [status, donorId]
   );
   return res.rows[0] ?? null;

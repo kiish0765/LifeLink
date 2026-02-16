@@ -8,8 +8,7 @@ export interface CreateHospitalInput {
   city?: string;
   state?: string;
   country?: string;
-  latitude?: number;
-  longitude?: number;
+  locationPlaceId?: string;
   contactPhone?: string;
 }
 
@@ -17,8 +16,8 @@ export async function createHospital(data: CreateHospitalInput): Promise<Hospita
   const res = await query<HospitalRow>(
     `INSERT INTO hospitals (
       user_id, name, registration_number, address_line, city, state, country,
-      latitude, longitude, contact_phone
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      location_place_id, contact_phone
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *`,
     [
       data.userId,
@@ -28,8 +27,7 @@ export async function createHospital(data: CreateHospitalInput): Promise<Hospita
       data.city ?? null,
       data.state ?? null,
       data.country ?? 'India',
-      data.latitude ?? null,
-      data.longitude ?? null,
+      data.locationPlaceId ?? null,
       data.contactPhone ?? null,
     ]
   );

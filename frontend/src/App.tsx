@@ -40,7 +40,7 @@ export default function App() {
         <Route path="donor/profile" element={<PrivateRoute roles={['donor']}><DonorProfile /></PrivateRoute>} />
         <Route path="hospital/profile" element={<PrivateRoute roles={['hospital']}><HospitalProfile /></PrivateRoute>} />
         <Route path="requests" element={<RequestsList />} />
-        <Route path="requests/new" element={<PrivateRoute roles={['hospital']}><CreateRequest /></PrivateRoute>} />
+        <Route path="requests/new" element={<PrivateRoute roles={['hospital', 'receiver']}><CreateRequest /></PrivateRoute>} />
         <Route path="requests/:id" element={<RequestDetail />} />
         <Route path="donations" element={<PrivateRoute roles={['donor']}><Donations /></PrivateRoute>} />
         <Route path="admin" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />

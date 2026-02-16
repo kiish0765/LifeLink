@@ -16,37 +16,51 @@ const createRequestSchema = z.object({
   urgency: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   patientInfo: z.string().max(2000).optional(),
   notes: z.string().max(1000).optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  locationPlaceId: z.string().max(200).optional(),
+  locationAddress: z.string().max(500).optional(),
 });
 
 // Hospital: create emergency blood request (triggers broadcast + SMS/Email)
 router.post(
   '/',
-  requireRoles('hospital'),
+  requireRoles('hospital', 'receiver'),
   asyncHandler(async (req, res) => {
-    if (!req.user?.hospitalId) {
-      return res.status(403).json({ message: 'Hospital profile required' });
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
     const body = createRequestSchema.parse(req.body);
-    const hospital = await import('../hospitals/hospitals.service.js').then((m) =>
-      m.getHospitalById(req.user!.hospitalId!)
-    );
-    const lat = body.latitude ?? hospital?.latitude ?? null;
-    const lon = body.longitude ?? hospital?.longitude ?? null;
-    if (!lat || !lon) {
-      return res.status(400).json({ message: 'Location (latitude, longitude) required for matching' });
+    let hospitalId: string | null = null;
+    let hospitalPlaceId: string | null = null;
+    if (req.user.role === 'hospital') {
+      if (!req.user.hospitalId) {
+        return res.status(403).json({ message: 'Hospital profile required' });
+      }
+      hospitalId = req.user.hospitalId;
+      const hospital = await import('../hospitals/hospitals.service.js').then((m) =>
+        m.getHospitalById(req.user!.hospitalId!)
+      );
+      hospitalPlaceId = hospital?.location_place_id ?? null;
     }
+    const placeId = body.locationPlaceId ?? hospitalPlaceId;
+    if (!placeId) {
+      return res.status(400).json({ message: 'Location (Google Maps place id) required for matching' });
+    }
+
+    const requesterRole = (req.user.role === 'hospital' || req.user.role === 'receiver')
+      ? req.user.role
+      : 'receiver';
+
     const request = await requestsService.createRequest({
-      hospitalId: req.user.hospitalId,
-      createdBy: req.user.id,
+      hospitalId,
+      requesterUserId: req.user!.id,
+      requesterRole,
       bloodGroup: body.bloodGroup as BloodGroup,
       unitsRequired: body.unitsRequired,
       urgency: body.urgency,
       patientInfo: body.patientInfo,
       notes: body.notes,
-      latitude: lat,
-      longitude: lon,
+      locationPlaceId: placeId,
+      locationAddress: body.locationAddress,
     });
     const ip = getClientIp(req);
     await auditPostgres(req.user.id, 'blood_request_created', 'blood_request', request.id, undefined, ip);
@@ -111,11 +125,16 @@ router.post(
   requireRoles('donor'),
   asyncHandler(async (req, res) => {
     if (!req.user?.donorId) return res.status(403).json({ message: 'Donor profile required' });
-    const schema = z.object({ status: z.enum(['accepted', 'rejected']) });
-    const { status } = schema.parse(req.body);
-    await requestsService.setMatchResponse(req.params.id, req.user.donorId, status);
+    const paramsSchema = z.object({ id: z.string().uuid() });
+    const bodySchema = z.object({ status: z.enum(['accepted', 'rejected']) });
+    const { id: requestId } = paramsSchema.parse(req.params);
+    const { status } = bodySchema.parse(req.body);
+    const updated = await requestsService.setMatchResponse(requestId, req.user.donorId, status);
+    if (!updated) {
+      return res.status(404).json({ message: 'Match not found for this donor and request' });
+    }
     const ip = getClientIp(req);
-    await auditPostgres(req.user.id, 'match_responded', 'blood_request', req.params.id, { status }, ip);
+    await auditPostgres(req.user.id, 'match_responded', 'blood_request', requestId, { status }, ip);
     res.json({ message: 'Response recorded' });
   })
 );

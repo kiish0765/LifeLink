@@ -54,8 +54,7 @@ export type DonorRow = {
   city: string | null;
   state: string | null;
   country: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  location_place_id: string | null;
   last_donation_at: Date | null;
   is_available: boolean;
   verification_status: string;
@@ -73,8 +72,7 @@ export type HospitalRow = {
   city: string | null;
   state: string | null;
   country: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  location_place_id: string | null;
   contact_phone: string | null;
   is_approved: boolean;
   approved_at: Date | null;
@@ -84,16 +82,17 @@ export type HospitalRow = {
 
 export type BloodRequestRow = {
   id: string;
-  hospital_id: string;
+  hospital_id: string | null;
+  requester_user_id: string;
+  requester_role: string;
   blood_group: string;
   units_required: number;
   urgency: string;
   status: string;
   patient_info: string | null;
   notes: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  created_by: string | null;
+  location_place_id: string;
+  location_address: string | null;
   created_at: Date;
   updated_at: Date;
   fulfilled_at: Date | null;

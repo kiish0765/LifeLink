@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../api/client';
+import GooglePlacePicker from '../components/GooglePlacePicker';
 import '../components/Layout.css';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
@@ -15,16 +16,13 @@ export default function CreateRequest() {
     urgency: 'high' as 'low' | 'medium' | 'high' | 'critical',
     patientInfo: '',
     notes: '',
-    latitude: '',
-    longitude: '',
+    location: { placeId: '', address: '' },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const lat = form.latitude ? parseFloat(form.latitude) : undefined;
-    const lon = form.longitude ? parseFloat(form.longitude) : undefined;
-    if (!lat || !lon) {
-      toast.error('Latitude and longitude are required for donor matching.');
+    if (!form.location.placeId) {
+      toast.error('Please pick a location from Google Maps suggestions.');
       return;
     }
     setLoading(true);
@@ -37,8 +35,8 @@ export default function CreateRequest() {
           urgency: form.urgency,
           patientInfo: form.patientInfo || undefined,
           notes: form.notes || undefined,
-          latitude: lat,
-          longitude: lon,
+          locationPlaceId: form.location.placeId,
+          locationAddress: form.location.address || undefined,
         }),
       });
       toast.success('Request created. Donors are being notified.');
@@ -75,14 +73,10 @@ export default function CreateRequest() {
             <option value="critical">Critical</option>
           </select>
         </div>
-        <div className="form-group">
-          <label>Latitude (required for matching)</label>
-          <input type="number" step="any" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))} placeholder="e.g. 12.9716" required />
-        </div>
-        <div className="form-group">
-          <label>Longitude</label>
-          <input type="number" step="any" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))} placeholder="e.g. 77.5946" required />
-        </div>
+        <GooglePlacePicker
+          value={form.location}
+          onChange={(location) => setForm((f) => ({ ...f, location }))}
+        />
         <div className="form-group">
           <label>Patient info (optional)</label>
           <textarea value={form.patientInfo} onChange={(e) => setForm((f) => ({ ...f, patientInfo: e.target.value }))} rows={2} />
